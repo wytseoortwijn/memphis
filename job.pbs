@@ -2,4 +2,8 @@
 #PBS -l nodes=4:ppn=2:E5520
 #PBS -W x=NACCESSPOLICY:SINGLEJOB
 
+export MOD_BASE=/software/fmtv2
+. $MOD_BASE/bin/mod_setup.sh
+module load openmpi
+
 mpirun -mca btl ^openib ./$F
