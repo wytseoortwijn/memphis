@@ -1,5 +1,5 @@
 #PBS -N job
-#PBS -L nodes=4:ppn=2:E5520
+#PBS -l nodes=4:ppn=2:E5520
 #PBS -W x=NACCESSPOLICY:SINGLEJOB
 
 mpirun -mca btl ^openib ./$F
