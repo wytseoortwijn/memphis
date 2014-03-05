@@ -23,7 +23,7 @@ main(int argc, char **argv) {
 		ierr = MPI_Send(&value, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
 		printf("P0 sent a value to P2\n");
 
-		ierr = MPI_Recv($value, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+		ierr = MPI_Recv(&value, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
 		printf("P0 received the value %i from P2!", value);
 	}
 	else if (my_id == 2) {
