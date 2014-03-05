@@ -4,7 +4,7 @@
 #define send_data_tag 2001
 #define return_data_tag 2002
 
-main(int argc, chat **argv) {
+main(int argc, char **argv) {
 	int ierr, num_procs, my_id, len;
 	char name[MPI_MAX_PROCESSOR_NAME];
 	MPI_Status status;
