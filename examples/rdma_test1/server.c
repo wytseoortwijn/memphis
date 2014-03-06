@@ -36,9 +36,6 @@ static void register_memory(struct connection* conn);
 static void on_completion(struct ibv_wc *wc);
 static void build_qp_attr(struct ibv_qp_init_attr *qp_attr);
 
-static void client();
-static void server();
-
 static struct context* s_ctx = NULL;
 
 void server() {
