@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <mpi.h>
+#include <rdma/rdma_cma.h>
 
 #include "client.c"
 #include "server.c"
