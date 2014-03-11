@@ -62,7 +62,8 @@ void server() {
   //test
   struct sockaddr_in* myaddr;
   myaddr = rdma_get_local_addr(listener);
-  printf("My address is %s.\n", inet_ntoa(&myaddr)); 
+  printf("My address is %s.\n", inet_ntoa(myaddr->sin_addr.s_addr)); 
+  //printf("My address is %s.\n", inet_ntoa(addr.sin_addr.s_addr)
   //test
 
 	while (rdma_get_cm_event(ec, &event) == 0) {
