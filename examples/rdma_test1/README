@@ -1,2 +1,2 @@
 Compiling:
-gcc -I/software/fmtv2/Linux-x86_64/pkg/openmpi-1.4.3/include -L/software/fmtv2/Linux-x86_64/pkg/openmpi-1.4.3/lib -lmpi -lopen-rte -lopen-pal -ldl -lnsl -lutil -lm -ldl -I/software/ewi/ofed/include -L/software/ewi/ofed/lib64 -lrdmacm -libverbs -o test client.c server.c main.c
+gcc -I/software/fmtv2/Linux-x86_64/pkg/openmpi-1.4.3/include -L/software/fmtv2/Linux-x86_64/pkg/openmpi-1.4.3/lib -lmpi -lopen-rte -lopen-pal -ldl -lnsl -lutil -lm -ldl -I/software/ewi/ofed/include -L/software/ewi/ofed/lib64 -lrdmacm -libverbs -o test main.c
