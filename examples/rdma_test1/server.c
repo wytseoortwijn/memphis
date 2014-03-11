@@ -52,7 +52,7 @@ void server() {
 	status = rdma_bind_addr(listener, (struct sockaddr *)&addr);
 	if (status) printf("Failed to bind the address.\n");
 
-  printf("My address is %lx.\n", addr->sin_addr->s_addr);
+  printf("My address is %lx.\n", addr.sin_addr.s_addr);
 
 	status = rdma_listen(listener, 10);
 	if (status) printf("Failed to listen.\n");
