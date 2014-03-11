@@ -52,14 +52,14 @@ void server() {
 	status = rdma_bind_addr(listener, (struct sockaddr *)&addr);
 	if (status) printf("Failed to bind the address.\n");
 
-  printf("My address is %lx.\n", addr.sin_addr.s_addr);
-
 	status = rdma_listen(listener, 10);
 	if (status) printf("Failed to listen.\n");
 
 	port = ntohs(rdma_get_src_port(listener));
 
 	printf("Listening on port %d.\n", port);
+
+  printf("My address is %s.\n", inet_ntoa(addr.sin_addr)); //test
 
 	while (rdma_get_cm_event(ec, &event) == 0) {
 		printf("server received an event.\n");
