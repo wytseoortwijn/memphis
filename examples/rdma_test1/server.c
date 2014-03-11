@@ -60,7 +60,8 @@ void server() {
 	printf("Listening on port %d.\n", port);
 
   //test
-  sockaddr* myaddr = rdma_get_local_addr(listener);
+  struct sockaddr* myaddr;
+  myaddr = rdma_get_local_addr(listener);
   printf("My address is %s.\n", inet_ntoa(((struct sockaddr_in*)myaddr->sin_addr); 
   //printf("My address is %s.\n", inet_ntoa(addr.sin_addr.s_addr)
   //fprintf(l, "address: %s\n", inet_ntoa(((struct sockaddr_in*)&saddr->sin_addr));
