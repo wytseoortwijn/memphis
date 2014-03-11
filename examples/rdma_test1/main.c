@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 	ierr = MPI_Get_processor_name(name, &len);
 	ierr = MPI_Get_address(&buf[0], &addr);
 
-	printf("I am process %i of %i on %s. Addr: %lx \n", id, num_procs, name, (long)buf[0]);
+	printf("I am process %i of %i on %s. Addr: %i \n", id, num_procs, name, buf[0]);
 
 	if (id == 0) 
 		server();
