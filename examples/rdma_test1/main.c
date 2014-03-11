@@ -15,16 +15,13 @@ int main(int argc, char** argv) {
 	int ierr, num_procs, id, len;
 	char name[MPI_MAX_PROCESSOR_NAME];
 	MPI_Status status;
-	MPI_Aint addr;
-	int buf[2];
 
 	ierr = MPI_Init(&argc, &argv);
 	ierr = MPI_Comm_rank(MPI_COMM_WORLD, &id);
 	ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 	ierr = MPI_Get_processor_name(name, &len);
-	ierr = MPI_Get_address(&buf[0], &addr);
 
-	printf("I am process %i of %i on %s. Addr: %i \n", id, num_procs, name, buf[0]);
+	printf("I am process %i of %i on %s.", id, num_procs, name);
 
 	if (id == 0) 
 		server();
