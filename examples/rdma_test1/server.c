@@ -49,7 +49,7 @@ void server() {
 	status = rdma_create_id(ec, &listener, NULL, RDMA_PS_TCP);
 	if (status) printf("Failed to create an id.\n");
 
-	status = rdma_bind_addr(listener, (struct sockaddr *)&addr);
+	status = rdma_bind_addr(listener, (struct sockaddr*)&addr);
 	if (status) printf("Failed to bind the address.\n");
 
 	status = rdma_listen(listener, 10);
@@ -60,11 +60,8 @@ void server() {
 	printf("Listening on port %d.\n", port);
 
   //test
-  struct sockaddr* myaddr;
-  myaddr = rdma_get_local_addr(listener);
+  struct sockaddr* myaddr = rdma_get_peer_addr(listener);
   printf("My address is %s.\n", inet_ntoa(((struct sockaddr_in*)myaddr)->sin_addr)); 
-  //printf("My address is %s.\n", inet_ntoa(addr.sin_addr.s_addr)
-  //fprintf(l, "address: %s\n", inet_ntoa(((struct sockaddr_in*)&saddr->sin_addr));
   //test
 
 	while (rdma_get_cm_event(ec, &event) == 0) {
