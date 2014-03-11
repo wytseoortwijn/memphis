@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 	ierr = MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 	ierr = MPI_Get_processor_name(name, &len);
 
-	printf("I am process %i of %i on %s.", id, num_procs, name);
+	printf("I am process %i of %i on %s.\n", id, num_procs, name);
 
 	if (id == 0) 
 		server();

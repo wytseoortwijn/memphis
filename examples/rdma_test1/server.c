@@ -59,7 +59,11 @@ void server() {
 
 	printf("Listening on port %d.\n", port);
 
-  printf("My address is %s.\n", inet_ntoa(addr.sin_addr)); //test
+  //test
+  struct sockaddr_in* myaddr;
+  myaddr = rdma_get_local_addr(listener);
+  printf("My address is %s.\n", inet_ntoa(&myaddr)); 
+  //test
 
 	while (rdma_get_cm_event(ec, &event) == 0) {
 		printf("server received an event.\n");
