@@ -344,6 +344,7 @@ int start(int mpi_id) {
   struct pingpong_dest my_dest;
   struct pingpong_dest* rem_dest;
   enum ibv_mtu mtu = IBV_MTU_1024;
+  LARGE_INTEGER	start, end, freq;
   int rcnt, scnt;
   int size = 4096;
   int rx_depth = 500;
@@ -412,6 +413,11 @@ int start(int mpi_id) {
 		ctx->pending |= PINGPONG_SEND_WRID;
 	}
 
+	if (!QueryPerformanceCounter(&start)) {
+		perror("QueryPerformanceCounter");
+		return 1;
+	}
+
 	rcnt = scnt = 0;
 	while (rcnt < iters || scnt < iters) {
 		struct ibv_wc wc[2];
@@ -464,12 +470,20 @@ int start(int mpi_id) {
 		}
 	}
 
+	if (!QueryPerformanceCounter(&end) ||
+		!QueryPerformanceFrequency(&freq)) {
+		perror("QueryPerformanceCounter/Frequency");
+		return 1;
+	}
+
 	{
 		double sec = (double) (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
 		long long bytes = (long long) size * iters * 2;
 
-		printf("%I64d bytes in %.2f seconds = %.2f Mbit/sec\n", bytes, sec, bytes * 8. / 1000000. / sec);
-		printf("%d iters in %.2f seconds = %.2f usec/iter\n", iters, sec, sec * 1000000. / iters);
+		printf("%I64d bytes in %.2f seconds = %.2f Mbit/sec\n",
+		       bytes, sec, bytes * 8. / 1000000. / sec);
+		printf("%d iters in %.2f seconds = %.2f usec/iter\n",
+		       iters, sec, sec * 1000000. / iters);
 	}
 
 	ibv_ack_cq_events(ctx->cq, num_cq_events);
