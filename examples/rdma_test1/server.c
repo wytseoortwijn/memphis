@@ -117,7 +117,7 @@ int server() {
 		return 1;
 	}
 
-	ctx = pp_init_ctx(ib_dev, size, rx_depth, ib_port);
+	ctx = init_ctx(ib_dev, size, rx_depth, ib_port);
 	if (!ctx)
 		return 1;
 
