@@ -97,7 +97,7 @@ static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, in
 	return ctx;
 }
 
-void server() {
+int server() {
   struct ibv_device** dev_list;
   struct ibv_device* ib_dev;
   struct pingpong_context* ctx;
