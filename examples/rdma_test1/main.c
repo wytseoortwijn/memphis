@@ -27,10 +27,7 @@ int main(int argc, char** argv) {
 
 	printf("I am process %i of %i on %s.\n", id, num_procs, name);
 
-	if (id == 0) 
-		server();
-	else if (id == 2)
-		client();
+	server();
 
 	MPI_Finalize();
 	printf("Process %i finalized.\n", id);
