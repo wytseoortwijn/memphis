@@ -236,9 +236,9 @@ static struct pingpong_dest* client_exch_dest(const struct pingpong_dest* my_des
 	fprintf(stderr, "Client: sended data\n");
 	fprintf(stderr, "Client: waiting to receive data\n");
 
-	MPI_Recv(&lid, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&qpn, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&psn, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&lid, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&qpn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&psn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
 
 	fprintf(stderr, "Client: data received\n");
 
@@ -261,9 +261,9 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 
 	fprintf(stderr, "Server: waiting to receive data\n");
 
-	MPI_Recv(&lid, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&qpn, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&psn, 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&lid, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&qpn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&psn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD, &status);
 
 	fprintf(stderr, "Server: received data data\n");
 
@@ -283,9 +283,9 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 
 	fprintf(stderr, "Server: about to send data\n");
 
-	MPI_Send(&lid, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(&qpn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(&psn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&lid, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&qpn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&psn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD);
 
 	fprintf(stderr, "Server: sended data\n");
 
