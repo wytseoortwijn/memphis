@@ -1,3 +1,6 @@
+#define send_data_tag 2001
+#define return_data_tag 2002
+
 enum {
 	PINGPONG_RECV_WRID = 1,
 	PINGPONG_SEND_WRID = 2,
@@ -156,7 +159,18 @@ static int post_recv(struct pingpong_context* ctx, int n)
 static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int ib_port, 
 	enum ibv_mtu mtu, int port, int sl, const struct pingpong_dest* my_dest)
 {
+	MPI_Status status;
+	struct pingpong_dest* rem_dest = NULL;
+	int res;
 
+	rem_dest = malloc(sizeof *rem_dest);
+
+	// Goal: receiving a LID, QPN, PSN from a client
+	MPI_Recv(&(rem_dest->lid), 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->qpn), 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->psn), 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+
+	fprintf(stderr, "The server received information from a client!!!!!\n");
 }
 
 int server() {
