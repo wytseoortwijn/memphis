@@ -1,3 +1,8 @@
+enum {
+	PINGPONG_RECV_WRID = 1,
+	PINGPONG_SEND_WRID = 2,
+};
+
 struct pingpong_context {
 	struct ibv_context* context;
 	struct ibv_comp_channel* channel;
@@ -9,6 +14,12 @@ struct pingpong_context {
 	int	size;
 	int	rx_depth;
 	int	pending;
+};
+
+struct pingpong_dest {
+	int lid;
+	int qpn;
+	int psn;
 };
 
 static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, int rx_depth, int port)
@@ -85,10 +96,10 @@ static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, in
 		attr.qp_access_flags = 0;
 
 		if (ibv_modify_qp(ctx->qp, &attr,
-				  IBV_QP_STATE |
-				  IBV_QP_PKEY_INDEX |
-				  IBV_QP_PORT |
-				  IBV_QP_ACCESS_FLAGS)) {
+				IBV_QP_STATE |
+				IBV_QP_PKEY_INDEX |
+				IBV_QP_PORT |
+				IBV_QP_ACCESS_FLAGS)) {
 			fprintf(stderr, "Failed to modify QP to INIT\n");
 			return NULL;
 		}
@@ -97,13 +108,45 @@ static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, in
 	return ctx;
 }
 
+static int post_recv(struct pingpong_context* ctx, int n)
+{
+	struct ibv_sge list;
+	struct ibv_recv_wr wr;
+	struct ibv_recv_wr* bad_wr;
+	int i;
+
+	list.addr	= (uintptr_t)ctx->buf;
+	list.length = ctx->size;
+	list.lkey	= ctx->mr->lkey;
+
+	wr.next	= NULL;
+	wr.wr_id = PINGPONG_RECV_WRID;
+	wr.sg_list = &list;
+	wr.num_sge = 1;
+
+	for (i = 0; i < n; ++i)
+		if (ibv_post_recv(ctx->qp, &wr, &bad_wr))
+			break;
+
+	return i;
+}
+
+static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int ib_port, 
+	enum ibv_mtu mtu, int port, int sl, const struct pingpong_dest* my_dest)
+{
+	
+}
+
 int server() {
   struct ibv_device** dev_list;
   struct ibv_device* ib_dev;
   struct pingpong_context* ctx;
+  struct pingpong_dest my_dest;
+  struct pingpong_dest* rem_dest;
   int size = 4096;
   int rx_depth = 500;
   int ib_port = 1;
+  int routs;
 
 	dev_list = ibv_get_device_list(NULL);
 	if (!dev_list) {
@@ -121,5 +164,22 @@ int server() {
 	if (!ctx)
 		return 1;
 
-	fprintf(stderr, "Everything works so far...\n");
+	routs = post_recv(ctx, ctx->rx_depth);
+	if (routs < ctx->rx_depth) {
+		fprintf(stderr, "Couldn't post receive (%d)\n", routs);
+		return 1;
+	}
+
+	my_dest.lid = pp_get_local_lid(ctx->context, ib_port);
+	my_dest.qpn = ctx->qp->qp_num;
+	my_dest.psn = rand() & 0xffffff;
+
+	if (!my_dest.lid) {
+		fprintf(stderr, "Couldn't get local LID\n");
+		return 1;
+	}
+
+	printf("local address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x\n", my_dest.lid, my_dest.qpn, my_dest.psn);
+
+	rem_dest = server_exch_dest(ctx, ib_port, mtu, port, sl, &my_dest);
 }
