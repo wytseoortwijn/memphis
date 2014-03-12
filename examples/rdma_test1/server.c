@@ -22,6 +22,28 @@ struct pingpong_dest {
 	int psn;
 };
 
+enum ibv_mtu pp_mtu_to_enum(int mtu)
+{
+	switch (mtu) {
+	case 256: return IBV_MTU_256;
+	case 512: return IBV_MTU_512;
+	case 1024: return IBV_MTU_1024;
+	case 2048: return IBV_MTU_2048;
+	case 4096: return IBV_MTU_4096;
+	default: return -1;
+	}
+}
+
+uint16_t pp_get_local_lid(struct ibv_context* context, int port)
+{
+	struct ibv_port_attr attr;
+
+	if (ibv_query_port(context, (uint8_t)port, &attr))
+		return 0;
+
+	return attr.lid;
+}
+
 static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, int rx_depth, int port)
 {
 	struct pingpong_context* ctx;
