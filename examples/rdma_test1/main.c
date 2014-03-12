@@ -444,6 +444,9 @@ int start(int mpi_id) {
 						fprintf(stderr, "Couldn't post receive (%d)\n", routs);
 						return 1;
 					}
+					else {
+						printf("Just posted a receive on %i...\n", mpi_id);
+					}
 				}
 
 				++rcnt;
@@ -459,6 +462,8 @@ int start(int mpi_id) {
 				if (post_send(ctx)) {
 					fprintf(stderr, "Couldn't post send\n");
 					return 1;
+				} else {
+					printf("Just posted a send on %i...\n", mpi_id);
 				}
 				ctx->pending = PINGPONG_RECV_WRID | PINGPONG_SEND_WRID;
 			}
