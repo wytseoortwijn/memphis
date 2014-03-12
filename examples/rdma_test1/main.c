@@ -218,15 +218,26 @@ static int post_recv(struct pingpong_context* ctx, int n)
 static struct pingpong_dest* client_exch_dest(const struct pingpong_dest* my_dest)
 {
 	struct pingpong_dest* rem_dest = NULL;
+	int lid, qpn, psn;
 	MPI_Status status;
 
-	MPI_Send(my_dest->lid, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(my_dest->qpn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(my_dest->psn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	rem_dest = malloc(sizeof *rem_dest);
 
-	MPI_Recv(rem_dest->lid, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(rem_dest->qpn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(rem_dest->psn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	lid = my_dest->lid;
+	qpn = my_dest->qpn;
+	psn = my_dest->psn;
+
+	MPI_Send(&lid, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&qpn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&psn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+
+	MPI_Recv(&lid, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&qpn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&psn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+
+	rem_dest->lid = lid;
+	rem_dest->qpn = qpn;
+	rem_dest->psn = psn;
 
 	return rem_dest;
 }
@@ -236,15 +247,18 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 {
 	MPI_Status status;
 	struct pingpong_dest* rem_dest = NULL;
+	int lid, qpn, psn;
 	int res;
 
 	rem_dest = malloc(sizeof *rem_dest);
 
-	MPI_Recv(rem_dest->lid, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(rem_dest->qpn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(rem_dest->psn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&lid, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&qpn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&psn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
 
-	fprintf(stderr, "The server received information from a client!!!!!\n");
+	rem_dest->lid = lid;
+	rem_dest->qpn = qpn;
+	rem_dest->psn = psn;
 
 	if (connect_ctx(ctx, ib_port, my_dest->psn, mtu, sl, rem_dest)) {
 		fprintf(stderr, "Couldn't connect to remote QP\n");
@@ -252,9 +266,13 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 		return NULL;
 	}
 
-	MPI_Send(my_dest->lid, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(my_dest->qpn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(my_dest->psn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	lid = my_dest->lid;
+	qpn = my_dest->qpn;
+	psn = my_dest->psn;
+
+	MPI_Send(&lid, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&qpn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&psn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
 
 	return rem_dest;
 }
