@@ -234,7 +234,7 @@ int server() {
 }
 
 int client() {
-	printf('Client started\n');
+	print('Client started\n');
 }
 
 int main(int argc, char** argv) {
