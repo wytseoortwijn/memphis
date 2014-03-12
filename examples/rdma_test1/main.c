@@ -143,6 +143,55 @@ static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, in
 	return ctx;
 }
 
+static int connect_ctx(struct pingpong_context* ctx, int port, int my_psn, enum ibv_mtu mtu, int sl, struct pingpong_dest* dest)
+{
+	struct ibv_qp_attr attr;
+
+	attr.qp_state	= IBV_QPS_RTR;
+	attr.path_mtu	= mtu;
+	attr.dest_qp_num = dest->qpn;
+	attr.rq_psn	= dest->psn;
+	attr.max_dest_rd_atomic	= 1;
+	attr.min_rnr_timer = 12;
+	attr.ah_attr.is_global = 0;
+	attr.ah_attr.dlid	= (uint16_t)dest->lid;
+	attr.ah_attr.sl	= (uint8_t)sl;
+	attr.ah_attr.src_path_bits = 0;
+	attr.ah_attr.port_num	= (uint8_t)port;
+
+	if (ibv_modify_qp(ctx->qp, &attr,
+				IBV_QP_STATE |
+				IBV_QP_AV |
+				IBV_QP_PATH_MTU |
+				IBV_QP_DEST_QPN |
+				IBV_QP_RQ_PSN |
+				IBV_QP_MAX_DEST_RD_ATOMIC |
+				IBV_QP_MIN_RNR_TIMER)) {
+		fprintf(stderr, "Failed to modify QP to RTR\n");
+		return 1;
+	}
+
+	attr.qp_state	= IBV_QPS_RTS;
+	attr.timeout = 14;
+	attr.retry_cnt = 7;
+	attr.rnr_retry = 7;
+	attr.sq_psn = my_psn;
+	attr.max_rd_atomic = 1;
+
+	if (ibv_modify_qp(ctx->qp, &attr,
+			IBV_QP_STATE |
+			IBV_QP_TIMEOUT |
+			IBV_QP_RETRY_CNT |
+			IBV_QP_RNR_RETRY |
+			IBV_QP_SQ_PSN |
+			IBV_QP_MAX_QP_RD_ATOMIC)) {
+		fprintf(stderr, "Failed to modify QP to RTS\n");
+		return 1;
+	}
+
+	return 0;
+}
+
 static int post_recv(struct pingpong_context* ctx, int n)
 {
 	struct ibv_sge list;
@@ -166,8 +215,24 @@ static int post_recv(struct pingpong_context* ctx, int n)
 	return i;
 }
 
+static struct pingpong_dest* client_exch_dest(const struct pingpong_dest* my_dest)
+{
+	struct pingpong_dest* rem_dest = NULL;
+	MPI_Status status;
+
+	MPI_Send(&(my_dest->lid), 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&(my_dest->qpn), 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&(my_dest->psn), 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+
+	MPI_Recv(&(rem_dest->lid), 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->qpn), 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->psn), 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+
+	return rem_dest;
+}
+
 static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int ib_port, 
-	enum ibv_mtu mtu, int port, int sl, const struct pingpong_dest* my_dest)
+	enum ibv_mtu mtu, int sl, const struct pingpong_dest* my_dest)
 {
 	MPI_Status status;
 	struct pingpong_dest* rem_dest = NULL;
@@ -175,15 +240,26 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 
 	rem_dest = malloc(sizeof *rem_dest);
 
-	// Goal: receiving a LID, QPN, PSN from a client
-	MPI_Recv(&(rem_dest->lid), 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&(rem_dest->qpn), 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&(rem_dest->psn), 1, MPI_INT, MPI_ANY_SOURCE, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->lid), 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->qpn), 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(&(rem_dest->psn), 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
 
 	fprintf(stderr, "The server received information from a client!!!!!\n");
+
+	if (connect_ctx(ctx, ib_port, my_dest->psn, mtu, sl, rem_dest)) {
+		fprintf(stderr, "Couldn't connect to remote QP\n");
+		free(rem_dest);
+		return NULL;
+	}
+
+	MPI_Send(&(my_dest->lid), 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&(my_dest->qpn), 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(&(my_dest->psn), 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+
+	return rem_dest;
 }
 
-int server() {
+int start(int mpi_id) {
   struct ibv_device** dev_list;
   struct ibv_device* ib_dev;
   struct pingpong_context* ctx;
@@ -230,12 +306,17 @@ int server() {
 
 	printf("local address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x\n", my_dest.lid, my_dest.qpn, my_dest.psn);
 
-	rem_dest = server_exch_dest(ctx, ib_port, mtu, port, sl, &my_dest);
+	if (mpi_id == 0) // node == server??
+		rem_dest = server_exch_dest(ctx, ib_port, mtu, sl, &my_dest);
+	else if (mpi_id == 2) // node == client?
+		rem_dest = client_exch_dest(&my_dest);
+
+	if (!rem_dest)
+		return 1;
+
+	printf("remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x\n", rem_dest->lid, rem_dest->qpn, rem_dest->psn);
 }
 
-int client() {
-	fprintf(stderr, "Initializing client..\n");
-}
 
 int main(int argc, char** argv) {
 	int ierr, num_procs, id, len;
@@ -249,10 +330,8 @@ int main(int argc, char** argv) {
 
 	printf("I am process %i of %i on %s.\n", id, num_procs, name);
 
-	if (id == 0)
-		server();
-	if (id == 2)
-		client();
+	if (id == 0 || id == 2)
+		start(id);
 
 	MPI_Finalize();
 	printf("Process %i finalized.\n", id);
