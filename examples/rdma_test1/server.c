@@ -134,7 +134,7 @@ static int post_recv(struct pingpong_context* ctx, int n)
 static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int ib_port, 
 	enum ibv_mtu mtu, int port, int sl, const struct pingpong_dest* my_dest)
 {
-	
+
 }
 
 int server() {
@@ -143,9 +143,12 @@ int server() {
   struct pingpong_context* ctx;
   struct pingpong_dest my_dest;
   struct pingpong_dest* rem_dest;
+  enum ibv_mtu mtu = IBV_MTU_1024;
   int size = 4096;
   int rx_depth = 500;
+  int port = 18515;
   int ib_port = 1;
+  int sl = 0;
   int routs;
 
 	dev_list = ibv_get_device_list(NULL);
