@@ -234,7 +234,7 @@ int server() {
 }
 
 int client() {
-	print('Client started\n');
+	fprintf(stderr, "Initializing client..\n");
 }
 
 int main(int argc, char** argv) {
