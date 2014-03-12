@@ -192,6 +192,26 @@ static int connect_ctx(struct pingpong_context* ctx, int port, int my_psn, enum 
 	return 0;
 }
 
+static int post_send(struct pingpong_context* ctx)
+{
+	struct ibv_sge list;
+	struct ibv_send_wr wr;
+	struct ibv_send_wr* bad_wr;
+
+	list.addr	= (uintptr_t)ctx->buf;
+	list.length = ctx->size;
+	list.lkey	= ctx->mr->lkey;
+
+	wr.next = NULL;
+	wr.wr_id = PINGPONG_SEND_WRID;
+	wr.sg_list = &list;
+	wr.num_sge = 1;
+	wr.opcode = IBV_WR_SEND;
+	wr.send_flags = IBV_SEND_SIGNALED;
+
+	return ibv_post_send(ctx->qp, &wr, &bad_wr);
+}
+
 static int post_recv(struct pingpong_context* ctx, int n)
 {
 	struct ibv_sge list;
@@ -227,20 +247,13 @@ static struct pingpong_dest* client_exch_dest(const struct pingpong_dest* my_des
 	qpn = my_dest->qpn;
 	psn = my_dest->psn;
 
-	fprintf(stderr, "Client: about to send data\n");
-
 	MPI_Send(&lid, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
 	MPI_Send(&qpn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
 	MPI_Send(&psn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
 
-	fprintf(stderr, "Client: sended data\n");
-	fprintf(stderr, "Client: waiting to receive data\n");
-
 	MPI_Recv(&lid, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
 	MPI_Recv(&qpn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
 	MPI_Recv(&psn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
-
-	fprintf(stderr, "Client: data received\n");
 
 	rem_dest->lid = lid;
 	rem_dest->qpn = qpn;
@@ -259,13 +272,9 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 
 	rem_dest = malloc(sizeof *rem_dest);
 
-	fprintf(stderr, "Server: waiting to receive data\n");
-
 	MPI_Recv(&lid, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD, &status);
 	MPI_Recv(&qpn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD, &status);
 	MPI_Recv(&psn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD, &status);
-
-	fprintf(stderr, "Server: received data data\n");
 
 	rem_dest->lid = lid;
 	rem_dest->qpn = qpn;
@@ -281,15 +290,51 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 	qpn = my_dest->qpn;
 	psn = my_dest->psn;
 
-	fprintf(stderr, "Server: about to send data\n");
-
 	MPI_Send(&lid, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD);
 	MPI_Send(&qpn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD);
 	MPI_Send(&psn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD);
 
-	fprintf(stderr, "Server: sended data\n");
-
 	return rem_dest;
+}
+
+int pp_close_ctx(struct pingpong_context* ctx)
+{
+	if (ibv_destroy_qp(ctx->qp)) {
+		fprintf(stderr, "Couldn't destroy QP\n");
+		return 1;
+	}
+
+	if (ibv_destroy_cq(ctx->cq)) {
+		fprintf(stderr, "Couldn't destroy CQ\n");
+		return 1;
+	}
+
+	if (ibv_dereg_mr(ctx->mr)) {
+		fprintf(stderr, "Couldn't deregister MR\n");
+		return 1;
+	}
+
+	if (ibv_dealloc_pd(ctx->pd)) {
+		fprintf(stderr, "Couldn't deallocate PD\n");
+		return 1;
+	}
+
+	if (ctx->channel) {
+		if (ibv_destroy_comp_channel(ctx->channel)) {
+			fprintf(stderr, "Couldn't destroy completion channel\n");
+			return 1;
+		}
+	}
+
+	if (ibv_close_device(ctx->context)) {
+		fprintf(stderr, "Couldn't release context\n");
+		return 1;
+	}
+
+	free(ctx->buf);
+	free(ctx);
+
+	return 0;
 }
 
 int start(int mpi_id) {
@@ -299,10 +344,12 @@ int start(int mpi_id) {
   struct pingpong_dest my_dest;
   struct pingpong_dest* rem_dest;
   enum ibv_mtu mtu = IBV_MTU_1024;
+  int rcnt, scnt;
   int size = 4096;
   int rx_depth = 500;
   int port = 18515;
   int ib_port = 1;
+  int iters = 1000;
   int sl = 0;
   int routs;
 
@@ -350,6 +397,88 @@ int start(int mpi_id) {
 	}
 
 	printf("remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x\n", rem_dest->lid, rem_dest->qpn, rem_dest->psn);
+
+	if (mpi_id == 2) 
+		if (connect_ctx(ctx, ib_port, my_dest.psn, mtu, sl, rem_dest))
+			return 1;
+
+	ctx->pending = PINGPONG_RECV_WRID;
+
+	if (mpi_id == 2) {
+		if (post_send(ctx)) {
+			fprintf(stderr, "Couldn't post send\n");
+			return 1;
+		}
+		ctx->pending |= PINGPONG_SEND_WRID;
+	}
+
+	rcnt = scnt = 0;
+	while (rcnt < iters || scnt < iters) {
+		struct ibv_wc wc[2];
+		int ne, i;
+
+		do {
+			ne = ibv_poll_cq(ctx->cq, 2, wc);
+			if (ne < 0) {
+				fprintf(stderr, "poll CQ failed %d\n", ne);
+				return 1;
+			}
+		} while (ne < 1);
+
+		for (i = 0; i < ne; ++i) {
+			if (wc[i].status != IBV_WC_SUCCESS) {
+				fprintf(stderr, "Failed status %s (%d) for wr_id %d\n", ibv_wc_status_str(wc[i].status), wc[i].status, (int) wc[i].wr_id);
+				return 1;
+			}
+
+			switch ((int) wc[i].wr_id) {
+			case PINGPONG_SEND_WRID:
+				++scnt;
+				break;
+
+			case PINGPONG_RECV_WRID:
+				if (--routs <= 1) {
+					routs += post_recv(ctx, ctx->rx_depth - routs);
+					if (routs < ctx->rx_depth) {
+						fprintf(stderr, "Couldn't post receive (%d)\n", routs);
+						return 1;
+					}
+				}
+
+				++rcnt;
+				break;
+
+			default:
+				fprintf(stderr, "Completion for unknown wr_id %d\n", (int) wc[i].wr_id);
+				return 1;
+			}
+
+			ctx->pending &= ~(int) wc[i].wr_id;
+			if (scnt < iters && !ctx->pending) {
+				if (post_send(ctx)) {
+					fprintf(stderr, "Couldn't post send\n");
+					return 1;
+				}
+				ctx->pending = PINGPONG_RECV_WRID | PINGPONG_SEND_WRID;
+			}
+		}
+	}
+
+	{
+		double sec = (double) (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
+		long long bytes = (long long) size * iters * 2;
+
+		printf("%I64d bytes in %.2f seconds = %.2f Mbit/sec\n", bytes, sec, bytes * 8. / 1000000. / sec);
+		printf("%d iters in %.2f seconds = %.2f usec/iter\n", iters, sec, sec * 1000000. / iters);
+	}
+
+	ibv_ack_cq_events(ctx->cq, num_cq_events);
+
+	if (close_ctx(ctx))
+		return 1;
+
+	ibv_free_device_list(dev_list);
+	free(rem_dest);
 }
 
 
