@@ -344,6 +344,7 @@ int start(int mpi_id) {
   struct pingpong_dest my_dest;
   struct pingpong_dest* rem_dest;
   enum ibv_mtu mtu = IBV_MTU_1024;
+  int num_cq_events = 0;
   int rcnt, scnt;
   int size = 4096;
   int rx_depth = 500;
