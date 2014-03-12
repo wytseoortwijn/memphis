@@ -329,8 +329,10 @@ int start(int mpi_id) {
 	else if (mpi_id == 2) // node == client?
 		rem_dest = client_exch_dest(&my_dest);
 
-	if (!rem_dest)
+	if (!rem_dest) {
+		fprintf(stderr, "rem_dest isn't built correctly\n");
 		return 1;
+	}
 
 	printf("remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x\n", rem_dest->lid, rem_dest->qpn, rem_dest->psn);
 }
