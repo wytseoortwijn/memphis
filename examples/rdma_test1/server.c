@@ -121,5 +121,5 @@ int server() {
 	if (!ctx)
 		return 1;
 
-	printf('Everything works so far..\n');
+	fprintf(stderr, "Everything works so far...\n");
 }
