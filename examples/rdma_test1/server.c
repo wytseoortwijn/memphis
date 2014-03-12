@@ -101,6 +101,9 @@ int server() {
   struct ibv_device** dev_list;
   struct ibv_device* ib_dev;
   struct pingpong_context* ctx;
+  int size = 4096;
+  int rx_depth = 500;
+  int ib_port = 1;
 
 	dev_list = ibv_get_device_list(NULL);
 	if (!dev_list) {
