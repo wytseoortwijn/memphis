@@ -56,38 +56,42 @@ static struct pingpong_context* init_ctx(struct ibv_device* ib_dev, int size, in
 		return NULL;
 	}
 
-	struct ibv_qp_init_attr attr;
-	memset(&attr, 0, sizeof attr);
+	{
+		struct ibv_qp_init_attr attr;
+		memset(&attr, 0, sizeof attr);
 
-	attr.send_cq = ctx->cq;
-	attr.recv_cq = ctx->cq;
-	attr.cap.max_send_wr  = 1;
-	attr.cap.max_recv_wr  = rx_depth;
-	attr.cap.max_send_sge = 1;
-	attr.cap.max_recv_sge = 1;
-	attr.qp_type = IBV_QPT_RC;
+		attr.send_cq = ctx->cq;
+		attr.recv_cq = ctx->cq;
+		attr.cap.max_send_wr  = 1;
+		attr.cap.max_recv_wr  = rx_depth;
+		attr.cap.max_send_sge = 1;
+		attr.cap.max_recv_sge = 1;
+		attr.qp_type = IBV_QPT_RC;
 
-	ctx->qp = ibv_create_qp(ctx->pd, &attr);
-	if (!ctx->qp)  {
-		fprintf(stderr, "Couldn't create QP\n");
-		return NULL;
+		ctx->qp = ibv_create_qp(ctx->pd, &attr);
+		if (!ctx->qp)  {
+			fprintf(stderr, "Couldn't create QP\n");
+			return NULL;
+		}
 	}
 
-	struct ibv_qp_attr attr;
-	memset(&attr, 0, sizeof attr);
+	{
+		struct ibv_qp_attr attr;
+		memset(&attr, 0, sizeof attr);
 
-	attr.qp_state = IBV_QPS_INIT;
-	attr.pkey_index = 0;
-	attr.port_num = (uint8_t)port;
-	attr.qp_access_flags = 0;
+		attr.qp_state = IBV_QPS_INIT;
+		attr.pkey_index = 0;
+		attr.port_num = (uint8_t)port;
+		attr.qp_access_flags = 0;
 
-	if (ibv_modify_qp(ctx->qp, &attr,
-			  IBV_QP_STATE |
-			  IBV_QP_PKEY_INDEX |
-			  IBV_QP_PORT |
-			  IBV_QP_ACCESS_FLAGS)) {
-		fprintf(stderr, "Failed to modify QP to INIT\n");
-		return NULL;
+		if (ibv_modify_qp(ctx->qp, &attr,
+				  IBV_QP_STATE |
+				  IBV_QP_PKEY_INDEX |
+				  IBV_QP_PORT |
+				  IBV_QP_ACCESS_FLAGS)) {
+			fprintf(stderr, "Failed to modify QP to INIT\n");
+			return NULL;
+		}
 	}
 
 	return ctx;
