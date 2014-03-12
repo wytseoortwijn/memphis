@@ -418,8 +418,6 @@ int start(int mpi_id) {
 		struct ibv_wc wc[2];
 		int ne, i;
 
-		printf("Iteration on %i\n", mpi_id);
-
 		do {
 			ne = ibv_poll_cq(ctx->cq, 2, wc);
 			if (ne < 0) {
@@ -465,7 +463,7 @@ int start(int mpi_id) {
 					fprintf(stderr, "Couldn't post send\n");
 					return 1;
 				} else {
-					printf("Just posted a send on %i...\n", mpi_id);
+					//printf("Just posted a send on %i...\n", mpi_id);
 				}
 				ctx->pending = PINGPONG_RECV_WRID | PINGPONG_SEND_WRID;
 			}
