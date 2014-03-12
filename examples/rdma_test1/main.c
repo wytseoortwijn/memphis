@@ -220,13 +220,13 @@ static struct pingpong_dest* client_exch_dest(const struct pingpong_dest* my_des
 	struct pingpong_dest* rem_dest = NULL;
 	MPI_Status status;
 
-	MPI_Send(&(my_dest->lid), 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(&(my_dest->qpn), 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(&(my_dest->psn), 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(my_dest->lid, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(my_dest->qpn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(my_dest->psn, 1, MPI_INT, 0, send_data_tag, MPI_COMM_WORLD);
 
-	MPI_Recv(&(rem_dest->lid), 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&(rem_dest->qpn), 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&(rem_dest->psn), 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(rem_dest->lid, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(rem_dest->qpn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(rem_dest->psn, 1, MPI_INT, 0, return_data_tag, MPI_COMM_WORLD, &status);
 
 	return rem_dest;
 }
@@ -240,9 +240,9 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 
 	rem_dest = malloc(sizeof *rem_dest);
 
-	MPI_Recv(&(rem_dest->lid), 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&(rem_dest->qpn), 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
-	MPI_Recv(&(rem_dest->psn), 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(rem_dest->lid, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(rem_dest->qpn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
+	MPI_Recv(rem_dest->psn, 1, MPI_INT, 2, return_data_tag, MPI_COMM_WORLD, &status);
 
 	fprintf(stderr, "The server received information from a client!!!!!\n");
 
@@ -252,9 +252,9 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 		return NULL;
 	}
 
-	MPI_Send(&(my_dest->lid), 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(&(my_dest->qpn), 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
-	MPI_Send(&(my_dest->psn), 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(my_dest->lid, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(my_dest->qpn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
+	MPI_Send(my_dest->psn, 1, MPI_INT, 2, send_data_tag, MPI_COMM_WORLD);
 
 	return rem_dest;
 }
