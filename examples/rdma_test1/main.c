@@ -418,6 +418,8 @@ int start(int mpi_id) {
 		struct ibv_wc wc[2];
 		int ne, i;
 
+		printf("Iteration on %i\n", mpi_id);
+
 		do {
 			ne = ibv_poll_cq(ctx->cq, 2, wc);
 			if (ne < 0) {
