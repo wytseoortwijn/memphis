@@ -297,7 +297,7 @@ static struct pingpong_dest* server_exch_dest(struct pingpong_context* ctx, int 
 	return rem_dest;
 }
 
-int pp_close_ctx(struct pingpong_context* ctx)
+int close_ctx(struct pingpong_context* ctx)
 {
 	if (ibv_destroy_qp(ctx->qp)) {
 		fprintf(stderr, "Couldn't destroy QP\n");
